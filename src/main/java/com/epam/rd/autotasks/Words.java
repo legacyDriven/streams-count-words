@@ -1,14 +1,11 @@
 package com.epam.rd.autotasks;
 
 import java.util.*;
-import java.util.regex.Matcher;
+import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class Words {
-
-    private static final Pattern wordPattern = Pattern.compile("[\\p{L}|\\p{N}]{4,}");
-    private static final Pattern numPattern = Pattern.compile("\\D{1,}");
 
     public String countWords (List<String> lines){
         List<String> presorted = lines.parallelStream()
@@ -26,14 +23,12 @@ public class Words {
                 .map(Entry::makeString)
                 .collect(Collectors.joining("\n"));
     }
-
     private static List<String> captureValues(String input){
-        Matcher matcher = wordPattern.matcher(input);
-        List<String> result = new ArrayList<>(10);
-        while(matcher.find()){
-            result.add(matcher.group());
-        }
-        return result;
+        return Pattern.compile("[\\p{L}|\\p{N}]{4,}")
+                .matcher(input)
+                .results()
+                .map(MatchResult::group)
+                .collect(Collectors.toList());
     }
 
     Comparator<Entry> entryComparatorCountAsc = Comparator.comparing(Entry::getCount);

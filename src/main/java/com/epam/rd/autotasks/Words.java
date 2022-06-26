@@ -1,43 +1,46 @@
 package com.epam.rd.autotasks;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 
 public class Words {
 
-    public String countWords(List<String> lines) {
+    private static final Pattern wordPattern = Pattern.compile("[\\p{L}|\\p{N}]{4,}");
+    private static final Pattern numPattern = Pattern.compile("\\D{1,}");
 
-        List<String> flatPresortedMapped = preprocess(lines);
+    public String countWords (List<String> lines){
+        List<String> presorted = lines.parallelStream()
+                .map(Words::captureValues)
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
 
-        Set<String> finalValues = new HashSet<>(flatPresortedMapped);
+        Set<String> unique = presorted
+                .parallelStream().distinct().map(String::toLowerCase).collect(Collectors.toSet());
 
-        return finalValues.stream()
-                .map(s-> Entry.constructEntry(s, Words.countFrequency(flatPresortedMapped, s)))
-                .sorted(entryComparatorCountDesc.thenComparing(Entry::getEntry))
+        return unique.parallelStream()
+                .map(s -> Entry.constructEntry(s, Words.countFrequency(presorted, s)))
                 .filter(entry -> entry.count>9)
-                .map(Object::toString)
+                .sorted(entryComparatorCountDesc.thenComparing(Entry::getEntry))
+                .map(Entry::makeString)
                 .collect(Collectors.joining("\n"));
     }
 
-        private List<String> preprocess(List<String> words){
-        return words.stream()
-                .map(s-> s.split(" "))
-                .flatMap(Arrays::stream)
-                .map(s -> s.replaceAll("\\p{IsPunctuation}", " "))  //"\\p{Punct}"   [^A-Za-z]"  "\\p{IsPunctuation}
-                .map(s -> s.replaceAll("[ ]{2,}"," "))
-                .map(s -> s.split(" "))
-                .flatMap(Arrays::stream)
-                .filter(s -> s.length()>3)
-                .map(String::toLowerCase)
-                .collect(Collectors.toList());
+    private static List<String> captureValues(String input){
+        Matcher matcher = wordPattern.matcher(input);
+        List<String> result = new ArrayList<>(10);
+        while(matcher.find()){
+            result.add(matcher.group());
+        }
+        return result;
     }
 
     Comparator<Entry> entryComparatorCountAsc = Comparator.comparing(Entry::getCount);
     Comparator<Entry> entryComparatorCountDesc = entryComparatorCountAsc.reversed();
 
     private static int countFrequency(List<String> data, String entry){
-        return (int) data.stream().filter(s -> s.equals(entry)).count();
+        return (int) data.stream().filter(s -> s.equalsIgnoreCase(entry)).count();
     }
 
     private static class Entry{
@@ -53,16 +56,15 @@ public class Words {
             return new Entry(value, count);
         }
 
-        public String getEntry() {
+        String getEntry() {
             return entry;
         }
 
-        public long getCount() {
+        long getCount() {
             return count;
         }
 
-        @Override
-        public String toString() {
+        String makeString() {
             return entry + " - " + count;
 
         }

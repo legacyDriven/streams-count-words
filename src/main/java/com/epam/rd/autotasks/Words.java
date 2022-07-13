@@ -41,30 +41,4 @@ public class Words {
                         Map.Entry::getValue,(a, b)->a,
                         LinkedHashMap::new));
     }
-
-    public String countWordsPioter(List<String> lines) {
-
-        String text = lines.toString();
-        String[] words = text.split("(?U)\\W+");
-
-        Comparator<Map.Entry<String, Long>> comparator =
-                Map.Entry.comparingByValue(Comparator.reverseOrder());
-        comparator=comparator.thenComparing(Map.Entry.comparingByKey());
-
-        Map<String,Long> freq = Arrays.stream(words)
-                .collect(Collectors.groupingBy
-                        (String::toLowerCase, Collectors.counting()));
-        System.out.println(freq);
-
-        LinkedHashMap<String,Long> freqSorted = freq.entrySet().stream()
-                .filter(x->x.getKey().length()>3&&x.getValue()>9)
-                .sorted(comparator)
-                .collect(Collectors.toMap(Map.Entry::getKey,
-                        Map.Entry::getValue,(a, b)->a,
-                        LinkedHashMap::new));
-
-        return freqSorted.keySet().stream().map(key->key+" - "+freqSorted.get(key)).collect(Collectors.joining("\n","",""));
-    }
-
-
 }

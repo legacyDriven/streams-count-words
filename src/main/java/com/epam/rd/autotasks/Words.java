@@ -22,7 +22,7 @@ public class Words {
 
         return result.keySet().stream()
                 .map(key->key + " - " + result.get(key))
-                .collect(Collectors.joining("\n","",""));
+                .collect(Collectors.joining("\n"));
     }
 
     private static Map<String, Long> preprocess(List<String> lines){

@@ -7,61 +7,64 @@ import java.util.stream.Collectors;
 
 public class Words {
 
-    public String countWords (List<String> lines){
-        List<String> presorted = lines.parallelStream()
-                .map(Words::captureValues)
-                .flatMap(List::stream)
-                .collect(Collectors.toList());
+    private static final Pattern pattern = Pattern.compile("[\\p{L}|\\p{N}]{4,}");
 
-        Set<String> unique = presorted
-                .parallelStream().distinct().map(String::toLowerCase).collect(Collectors.toSet());
+    private static final Comparator<Map.Entry<String, Long>> entryComparatorCountDesc =
+            Map.Entry.comparingByValue(Comparator.reverseOrder());
 
-        return unique.parallelStream()
-                .map(s -> Entry.constructEntry(s, Words.countFrequency(presorted, s)))
-                .filter(entry -> entry.count>9)
-                .sorted(entryComparatorCountDesc.thenComparing(Entry::getEntry))
-                .map(Entry::makeString)
-                .collect(Collectors.joining("\n"));
+    private static final Comparator<Map.Entry<String, Long>> entryByCountDescThenName =
+            entryComparatorCountDesc.thenComparing(Map.Entry.comparingByKey());
+
+    public String countWords(List<String> lines) {
+        Map<String, Long> preprocessed = Words.preprocess(lines);
+
+        Map<String, Long> result = Words.sortPreprocessed(preprocessed);
+
+        return result.keySet().stream()
+                .map(key->key + " - " + result.get(key))
+                .collect(Collectors.joining("\n","",""));
     }
-    private static List<String> captureValues(String input){
-        return Pattern.compile("[\\p{L}|\\p{N}]{4,}")
-                .matcher(input)
+
+    private static Map<String, Long> preprocess(List<String> lines){
+        return pattern.matcher(lines.stream()
+                        .map(s -> s.split(" "))
+                        .flatMap(Arrays::stream).collect(Collectors.joining(" ")))
                 .results()
                 .map(MatchResult::group)
-                .collect(Collectors.toList());
+                .collect(Collectors.groupingBy(String::toLowerCase, Collectors.counting()));
     }
 
-    Comparator<Entry> entryComparatorCountAsc = Comparator.comparing(Entry::getCount);
-    Comparator<Entry> entryComparatorCountDesc = entryComparatorCountAsc.reversed();
-
-    private static int countFrequency(List<String> data, String entry){
-        return (int) data.stream().filter(s -> s.equalsIgnoreCase(entry)).count();
+    private static Map<String, Long> sortPreprocessed(Map<String, Long> map){
+        return map.entrySet().stream()
+                .filter(s -> s.getValue()>9).sorted(entryByCountDescThenName)
+                .collect(Collectors.toMap(Map.Entry::getKey,
+                        Map.Entry::getValue,(a, b)->a,
+                        LinkedHashMap::new));
     }
 
-    private static class Entry{
-        private final String entry;
-        private final long count;
+    public String countWordsPioter(List<String> lines) {
 
-        private Entry(String entry, long count) {
-            this.entry = entry;
-            this.count = count;
-        }
+        String text = lines.toString();
+        String[] words = text.split("(?U)\\W+");
 
-        static Entry constructEntry(String value, long count){
-            return new Entry(value, count);
-        }
+        Comparator<Map.Entry<String, Long>> comparator =
+                Map.Entry.comparingByValue(Comparator.reverseOrder());
+        comparator=comparator.thenComparing(Map.Entry.comparingByKey());
 
-        String getEntry() {
-            return entry;
-        }
+        Map<String,Long> freq = Arrays.stream(words)
+                .collect(Collectors.groupingBy
+                        (String::toLowerCase, Collectors.counting()));
+        System.out.println(freq);
 
-        long getCount() {
-            return count;
-        }
+        LinkedHashMap<String,Long> freqSorted = freq.entrySet().stream()
+                .filter(x->x.getKey().length()>3&&x.getValue()>9)
+                .sorted(comparator)
+                .collect(Collectors.toMap(Map.Entry::getKey,
+                        Map.Entry::getValue,(a, b)->a,
+                        LinkedHashMap::new));
 
-        String makeString() {
-            return entry + " - " + count;
-
-        }
+        return freqSorted.keySet().stream().map(key->key+" - "+freqSorted.get(key)).collect(Collectors.joining("\n","",""));
     }
+
+
 }
